@@ -63,8 +63,9 @@ fun ConfiguracionHogarScreen(
     var menuAbierto by remember { mutableStateOf(false) }
     var miembrosEditan by remember { mutableStateOf(hogar.miembrosPuedenEditar) }
     var recordatorios by remember { mutableStateOf(true) }
+    var mostrarDialogo by remember { mutableStateOf(false) }
+    var nombreHogar by remember { mutableStateOf(hogar.nombre) }
 
-    // "Ángel, Freddy, Rubén y André", como en el Figma
     val nombres = hogar.miembros.map { it.nombre.substringBefore(" ") }
     val listaMiembros = nombres.dropLast(1).joinToString(", ") + " y " + nombres.last()
     val totalPredeterminadas = DatosMuestra.habitaciones.sumOf { it.predeterminadas.size }
@@ -112,9 +113,7 @@ fun ConfiguracionHogarScreen(
             }
 
             Seccion("General")
-            Fila(Icons.Filled.Edit, "Nombre del hogar", hogar.nombre) {
-                // Paso 2 (08h): aquí se abre el diálogo para cambiar el nombre
-            }
+            Fila(Icons.Filled.Edit, "Nombre del hogar", nombreHogar) { mostrarDialogo = true }
             Fila(Icons.Filled.Key, "Código de invitación", "${hogar.codigo} · vence en 7 días", onMiembros)
             Fila(Icons.Filled.Group, "Miembros (${hogar.miembros.size})", listaMiembros, onMiembros)
 
@@ -150,6 +149,17 @@ fun ConfiguracionHogarScreen(
                 )
             }
         }
+    }
+
+    if (mostrarDialogo) {
+        DialogoNombreHogar(
+            nombreActual = nombreHogar,
+            onCancelar = { mostrarDialogo = false },
+            onGuardar = { nuevo ->
+                nombreHogar = nuevo
+                mostrarDialogo = false
+            },
+        )
     }
 }
 
