@@ -8,18 +8,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -48,6 +56,11 @@ fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Un
     val inicial = if (editar) listOf(Persona.RUBEN, Persona.FREDDY) else listOf(Persona.ANDRE, Persona.ANGEL, Persona.RUBEN)
     val elegidos = remember { mutableStateListOf<Persona>().apply { addAll(inicial) } }
     var porTurnos by rememberSaveable { mutableStateOf(true) }
+    var alAzar by rememberSaveable { mutableStateOf(true) }
+    var revuelto by remember { mutableStateOf<List<Persona>?>(null) }
+    val base = revuelto ?: inicial
+    val orden = base.filter { it in elegidos } + elegidos.filter { it !in base }
+    val fechas = if (editar) listOf("Jue 15 oct", "Jue 22 oct", "Jue 29 oct") else listOf("Sáb 17 oct", "Sáb 24 oct", "Sáb 31 oct")
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -115,6 +128,39 @@ fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Un
                 "Se turnan: cada ${if (editar) "jueves" else "sábado"} le toca a uno.",
                 porTurnos,
             ) { porTurnos = true }
+            if (porTurnos && orden.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Orden de los turnos", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { revuelto = elegidos.shuffled() }) {
+                        Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Sortear de nuevo")
+                    }
+                }
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf("Manual", "Al azar").forEachIndexed { i, texto ->
+                        SegmentedButton(
+                            selected = alAzar == (i == 1),
+                            onClick = { alAzar = i == 1 },
+                            shape = SegmentedButtonDefaults.itemShape(index = i, count = 2),
+                        ) { Text(texto) }
+                    }
+                }
+                Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
+                    fechas.forEachIndexed { i, fecha ->
+                        val persona = orden[i % orden.size]
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(fecha, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(96.dp))
+                            Avatar(persona)
+                            Spacer(Modifier.width(12.dp))
+                            Text(persona.nombre.substringBefore(" "), style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
         }
     }
 }
