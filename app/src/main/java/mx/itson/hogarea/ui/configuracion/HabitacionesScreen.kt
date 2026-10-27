@@ -38,6 +38,10 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,12 +52,14 @@ import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
 import mx.itson.hogarea.datos.Habitacion
 import mx.itson.hogarea.ui.componentes.BarraSuperior
+import mx.itson.hogarea.ui.componentes.HojaHuella
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
 @Composable
 fun HabitacionesScreen(onAtras: () -> Unit, onEditar: () -> Unit, onAgregar: () -> Unit) {
     val cs = MaterialTheme.colorScheme
+    var aEliminar by remember { mutableStateOf<Habitacion?>(null) }
     Scaffold(
         containerColor = Color.Transparent,
         topBar = { BarraSuperior("Habitaciones", onAtras = onAtras) },
@@ -80,9 +86,18 @@ fun HabitacionesScreen(onAtras: () -> Unit, onEditar: () -> Unit, onAgregar: () 
                 )
             }
             items(DatosMuestra.habitaciones) { habitacion ->
-                TarjetaHabitacion(habitacion, onEditar = onEditar, onEliminar = { })
+                TarjetaHabitacion(habitacion, onEditar = onEditar, onEliminar = { aEliminar = habitacion })
             }
         }
+    }
+
+    aEliminar?.let { h ->
+        HojaHuella(
+            titulo = "Eliminar “${h.nombre}”",
+            texto = "También se eliminarán sus ${h.predeterminadas.size} tareas predeterminadas. Usa tu huella para confirmar.",
+            onCancelar = { aEliminar = null },
+            onSensor = { aEliminar = null },
+        )
     }
 }
 
