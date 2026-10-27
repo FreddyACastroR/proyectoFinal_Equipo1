@@ -1,5 +1,6 @@
 package mx.itson.hogarea.ui.tareas
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Weekend
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +32,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -64,6 +68,7 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
         mutableStateOf(if (editar) "Debajo de sillones y mesa de centro" else "Mover sillones y usar limpiador")
     }
     var habitacion by rememberSaveable { mutableStateOf("Sala") }
+    var elegida by rememberSaveable { mutableStateOf(if (editar) "Barrer la sala" else "") }
     var dia by rememberSaveable { mutableIntStateOf(if (editar) 3 else 5) }
     var recurrencia by rememberSaveable { mutableIntStateOf(0) }
 
@@ -104,13 +109,6 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                     ) { Text(texto) }
                 }
             }
-            if (predeterminada) {
-                Text(
-                    "La lista de predeterminadas llega en el siguiente paso.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = cs.onSurfaceVariant,
-                )
-            }
             if (!predeterminada) {
                 Text(
                     "Las predeterminadas las define el creador del hogar para cada habitación.",
@@ -138,6 +136,7 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                 opciones = DatosMuestra.habitaciones.map { it.nombre } + listOf("Toda la casa", "No aplica"),
                 onElegir = {
                     habitacion = it
+                    elegida = ""
                 },
                 icono = Icons.Filled.Weekend,
             )
@@ -146,6 +145,27 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                     "También puedes elegir “Toda la casa” o “No aplica”.",
                     style = MaterialTheme.typography.bodySmall,
                     color = cs.onSurfaceVariant,
+                )
+            }
+            if (predeterminada) {
+                val lista = DatosMuestra.habitaciones.firstOrNull { it.nombre == habitacion }?.predeterminadas.orEmpty()
+                Etiqueta("Elige una tarea predeterminada de $habitacion")
+                if (lista.isEmpty()) {
+                    Text(
+                        "Esta habitación no tiene tareas predeterminadas.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = cs.onSurfaceVariant,
+                    )
+                }
+                lista.forEach { tarea ->
+                    OpcionRadio(tarea, seleccionada = elegida == tarea) { elegida = tarea }
+                }
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción breve") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             Etiqueta("Día de la semana")
@@ -226,6 +246,24 @@ private fun CampoMenu(
                     },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun OpcionRadio(texto: String, seleccionada: Boolean, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (seleccionada) cs.secondaryContainer else cs.surfaceContainerLow,
+        ),
+        border = if (seleccionada) BorderStroke(1.dp, cs.primary) else null,
+    ) {
+        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = seleccionada, onClick = onClick)
+            Text(texto, style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
