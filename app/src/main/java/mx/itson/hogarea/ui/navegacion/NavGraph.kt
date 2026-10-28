@@ -12,12 +12,15 @@ import mx.itson.hogarea.ui.extras.extras
 import mx.itson.hogarea.ui.hogar.hogar
 import mx.itson.hogarea.ui.inicio.inicio
 import mx.itson.hogarea.ui.perfil.perfil
+import mx.itson.hogarea.ui.revision.RUTA_REVISION
+import mx.itson.hogarea.ui.revision.revision
 import mx.itson.hogarea.ui.tareas.tareas
 
 @Composable
 fun NavGraph() {
     val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = Rutas.LOGIN) {
+    NavHost(navController = nav, startDestination = RUTA_REVISION) { // demo/revision: arranca en el menú
+        revision(nav)
         acceso(nav)
         hogar(nav)
         inicio(nav)
