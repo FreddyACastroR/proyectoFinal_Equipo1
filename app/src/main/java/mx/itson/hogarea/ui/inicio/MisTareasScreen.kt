@@ -1,8 +1,8 @@
 package mx.itson.hogarea.ui.inicio
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,6 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,19 +39,19 @@ import mx.itson.hogarea.ui.theme.HogareaTheme
 
 private const val TODOS = "Todos mis hogares"
 
-
 @Composable
 fun MisTareasScreen(
     soloLectura: Boolean,
     onIrPestana: (String) -> Unit,
     onNotificaciones: () -> Unit,
     onNuevaTarea: () -> Unit,
+    onAbrirTarea: (Int) -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     var hogar by rememberSaveable { mutableStateOf(if (soloLectura) DatosMuestra.depaObregon.nombre else TODOS) }
     val opciones = listOf(TODOS) + DatosMuestra.hogares.map { it.nombre }
 
-
+    // 05: las tareas de Rubén (el usuario de la muestra). 05b: todas las del hogar.
     val tareas = DatosMuestra.tareas.filter {
         if (soloLectura) it.hogar == hogar
         else Persona.RUBEN in it.asignados && (hogar == TODOS || it.hogar == hogar)
@@ -90,10 +93,22 @@ fun MisTareasScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SelectorHogar(hogar, if (soloLectura) listOf(hogar) else opciones, onElegir = { hogar = it })
+            if (soloLectura) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer),
+                ) {
+                    Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Visibility, contentDescription = null)
+                        Text(
+                            "Solo puedes ver las tareas de este hogar. Puedes completar únicamente las que te asignaron.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
+            }
             Semana()
             ProgresoDelDia(if (soloLectura) "$hogar · hoy" else "Hoy, jueves 15", hechasHoy, totalHoy)
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-            }
+            ListaTareas(tareas = tareas, onAbrir = onAbrirTarea, modifier = Modifier.weight(1f).fillMaxWidth())
         }
     }
 }
@@ -108,6 +123,7 @@ private fun MisTareasPreview() {
                 onIrPestana = {},
                 onNotificaciones = {},
                 onNuevaTarea = {},
+                onAbrirTarea = {},
             )
         }
     }
