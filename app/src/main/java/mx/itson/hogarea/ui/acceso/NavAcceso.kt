@@ -3,7 +3,6 @@ package mx.itson.hogarea.ui.acceso
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import mx.itson.hogarea.ui.componentes.EnConstruccion
 import mx.itson.hogarea.ui.navegacion.Rutas
 
 fun NavGraphBuilder.acceso(nav: NavController) {
@@ -15,5 +14,10 @@ fun NavGraphBuilder.acceso(nav: NavController) {
         )
     }
     composable(Rutas.RECUPERAR) { RecuperarScreen(onAtras = { nav.popBackStack() }) }
-    composable(Rutas.REGISTRO) { EnConstruccion("03", "Registro") }
+    composable(Rutas.REGISTRO) {
+        RegistroScreen(
+            onAtras = { nav.popBackStack() },
+            onCrearCuenta = { nav.navigate(Rutas.BIENVENIDA) { popUpTo(Rutas.LOGIN) { inclusive = true } } },
+        )
+    }
 }
