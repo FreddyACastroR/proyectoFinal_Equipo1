@@ -7,7 +7,13 @@ import mx.itson.hogarea.ui.componentes.EnConstruccion
 import mx.itson.hogarea.ui.navegacion.Rutas
 
 fun NavGraphBuilder.acceso(nav: NavController) {
-    composable(Rutas.LOGIN) { EnConstruccion("01", "Iniciar sesión") }
+    composable(Rutas.LOGIN) {
+        LoginScreen(
+            onEntrar = { nav.navigate(Rutas.MIS_TAREAS) { popUpTo(Rutas.LOGIN) { inclusive = true } } },
+            onOlvide = { nav.navigate(Rutas.RECUPERAR) },
+            onRegistro = { nav.navigate(Rutas.REGISTRO) },
+        )
+    }
     composable(Rutas.RECUPERAR) { EnConstruccion("02", "Recuperar contraseña") }
     composable(Rutas.REGISTRO) { EnConstruccion("03", "Registro") }
 }
