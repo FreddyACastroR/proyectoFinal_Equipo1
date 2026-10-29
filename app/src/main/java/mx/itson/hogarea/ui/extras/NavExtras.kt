@@ -7,7 +7,7 @@ import mx.itson.hogarea.ui.componentes.EnConstruccion
 import mx.itson.hogarea.ui.navegacion.Rutas
 
 fun NavGraphBuilder.extras(nav: NavController) {
+    composable(Rutas.NOTIFICACIONES) { NotificacionesScreen(onAtras = { nav.popBackStack() }) }
     composable(Rutas.HISTORIAL) { EnConstruccion("11", "Historial") }
     composable(Rutas.PUNTOS) { EnConstruccion("12", "Puntos y recompensas") }
-    composable(Rutas.NOTIFICACIONES) { EnConstruccion("13", "Notificaciones") }
 }
