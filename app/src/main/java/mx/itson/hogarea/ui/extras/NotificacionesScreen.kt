@@ -1,8 +1,13 @@
 package mx.itson.hogarea.ui.extras
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,9 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -27,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
@@ -44,6 +52,12 @@ import mx.itson.hogarea.ui.theme.LocalTema
 fun NotificacionesScreen(onAtras: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val grupos = DatosMuestra.notificaciones.groupBy { it.cuando } // "Hoy" y "Ayer"
+
+    // 13b · Desde Android 13 hay que pedir permiso antes de mostrar notificaciones
+    val contexto = LocalContext.current
+    val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
+        if (concedido) mostrarRecordatorio(contexto)
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -68,6 +82,21 @@ fun NotificacionesScreen(onAtras: () -> Unit) {
                     color = cs.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            pedirPermiso.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            mostrarRecordatorio(contexto)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                ) {
+                    Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text("Probar recordatorio en el teléfono", modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
     }
