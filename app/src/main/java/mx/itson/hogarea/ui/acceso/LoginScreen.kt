@@ -36,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import mx.itson.hogarea.ui.componentes.HojaHuella
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
@@ -57,6 +59,7 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
     var contrasena by rememberSaveable { mutableStateOf("hogarea123") }
     var verContrasena by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf(false) } // 01c
+    var huella by remember { mutableStateOf(false) } // 01b
 
     Scaffold(containerColor = Color.Transparent) { padding ->
         Column(
@@ -135,7 +138,7 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
                 HorizontalDivider(Modifier.weight(1f))
             }
             OutlinedButton(
-                onClick = { }, // la hoja de huella llega en 01b
+                onClick = { huella = true },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
                 Icon(Icons.Filled.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -147,6 +150,19 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
                 TextButton(onClick = onRegistro) { Text("Regístrate") }
             }
         }
+    }
+
+    if (huella) {
+        HojaHuella(
+            titulo = "Inicia sesión en Hogarea",
+            texto = "Usa tu huella digital registrada en este teléfono para entrar sin escribir tu contraseña.",
+            onCancelar = { huella = false },
+            onSensor = {
+                huella = false
+                onEntrar()
+            },
+            textoCancelar = "Usar contraseña",
+        )
     }
 }
 
