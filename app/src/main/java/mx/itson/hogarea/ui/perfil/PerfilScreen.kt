@@ -52,6 +52,7 @@ import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.navegacion.Rutas
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
+import mx.itson.hogarea.ui.theme.LocalTema
 
 @Composable
 fun PerfilScreen(
@@ -66,7 +67,7 @@ fun PerfilScreen(
     val completadas = DatosMuestra.completadasDelMes.first { it.first == yo }.second
     var recordatorios by rememberSaveable { mutableStateOf(true) }
     var huella by rememberSaveable { mutableStateOf(true) }
-    var oscuro by rememberSaveable { mutableStateOf(false) } // en el paso 2 se cambia por el tema de la app
+    val tema = LocalTema.current
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -133,9 +134,8 @@ fun PerfilScreen(
                 FilaInterruptor(Icons.Filled.Fingerprint, "Entrar con huella", "Sin escribir la contraseña", huella) {
                     huella = it
                 }
-                FilaInterruptor(Icons.Filled.DarkMode, "Tema oscuro", "Colores oscuros en toda la app", oscuro) {
-                    oscuro = it
-                }
+                // Al tocarlo cambia toda la app, no solo esta pantalla
+                FilaInterruptor(Icons.Filled.DarkMode, "Tema oscuro", "Colores oscuros en toda la app", tema.oscuro, tema.cambiar)
             }
         }
     }
