@@ -54,6 +54,8 @@ fun UnirseScreen(onAtras: () -> Unit, onUnirme: () -> Unit) {
     val hogar = DatosMuestra.depaObregon
     var codigo by rememberSaveable { mutableStateOf(hogar.codigo) }
     val valido = codigo.trim() == hogar.codigo
+    // 04e: un código completo que no es el de Depa Obregón
+    val error = codigo.length >= hogar.codigo.length && !valido
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -61,6 +63,7 @@ fun UnirseScreen(onAtras: () -> Unit, onUnirme: () -> Unit) {
         bottomBar = {
             Button(
                 onClick = onUnirme,
+                enabled = valido,
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
@@ -86,7 +89,13 @@ fun UnirseScreen(onAtras: () -> Unit, onUnirme: () -> Unit) {
                 onValueChange = { codigo = it.uppercase() },
                 label = { Text("Código de invitación") },
                 leadingIcon = { Icon(Icons.Filled.Key, contentDescription = null) },
-                supportingText = { Text("Ejemplo: CASA-7Q29") },
+                isError = error,
+                supportingText = {
+                    Text(
+                        if (error) "Ese código no existe o ya venció. Pídele uno nuevo al creador del hogar."
+                        else "Ejemplo: CASA-7Q29",
+                    )
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
