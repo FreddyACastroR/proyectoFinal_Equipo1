@@ -56,6 +56,7 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
     var correo by rememberSaveable { mutableStateOf("angel@correo.com") }
     var contrasena by rememberSaveable { mutableStateOf("hogarea123") }
     var verContrasena by rememberSaveable { mutableStateOf(false) }
+    var error by rememberSaveable { mutableStateOf(false) } // 01c
 
     Scaffold(containerColor = Color.Transparent) { padding ->
         Column(
@@ -96,7 +97,16 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
             )
             OutlinedTextField(
                 value = contrasena,
-                onValueChange = { contrasena = it },
+                onValueChange = {
+                    contrasena = it
+                    error = false
+                },
+                isError = error,
+                supportingText = if (error) {
+                    { Text("Correo o contraseña incorrectos. Revisa e inténtalo de nuevo.") }
+                } else {
+                    null
+                },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                 trailingIcon = {
@@ -116,7 +126,7 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
                 Text("¿Olvidaste tu contraseña?")
             }
             Button(
-                onClick = onEntrar,
+                onClick = { if (contrasena == "hogarea123") onEntrar() else error = true },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) { Text("Iniciar sesión") }
             Row(verticalAlignment = Alignment.CenterVertically) {
