@@ -14,6 +14,6 @@ fun NavGraphBuilder.acceso(nav: NavController) {
             onRegistro = { nav.navigate(Rutas.REGISTRO) },
         )
     }
-    composable(Rutas.RECUPERAR) { EnConstruccion("02", "Recuperar contraseña") }
+    composable(Rutas.RECUPERAR) { RecuperarScreen(onAtras = { nav.popBackStack() }) }
     composable(Rutas.REGISTRO) { EnConstruccion("03", "Registro") }
 }
