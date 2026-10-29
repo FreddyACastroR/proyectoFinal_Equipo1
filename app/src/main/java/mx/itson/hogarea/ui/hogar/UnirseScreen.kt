@@ -47,7 +47,6 @@ import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 import mx.itson.hogarea.ui.theme.LocalTema
 
-// 04d y 04e · Unirse con código. DEPA-K3M8 encuentra Depa Obregón; otro código completo es 04e (error).
 @Composable
 fun UnirseScreen(onAtras: () -> Unit, onUnirme: () -> Unit) {
     val cs = MaterialTheme.colorScheme

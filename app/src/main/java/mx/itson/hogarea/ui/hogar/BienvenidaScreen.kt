@@ -36,7 +36,6 @@ import mx.itson.hogarea.datos.Persona
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
-// 04 · Crear un hogar o unirse con código (después del registro)
 @Composable
 fun BienvenidaScreen(onCrear: () -> Unit, onUnirse: () -> Unit) {
     val cs = MaterialTheme.colorScheme
