@@ -20,8 +20,10 @@ object Rutas {
     // Crear y editar tareas
     const val NUEVA_TAREA = "tarea/nueva"                  // 06a y 06e
     const val ASIGNAR_TAREA = "tarea/asignar"              // 06b
-    const val EDITAR_TAREA = "tarea/editar"                // 06c
-    const val EDITAR_ASIGNACION = "tarea/editar/asignar"   // 06d
+    const val EDITAR_TAREA = "tarea/editar/{id}"           // 06c
+    const val EDITAR_ASIGNACION = "tarea/editar/{id}/asignar" // 06d
+    fun editarTarea(id: Int) = "tarea/editar/$id"
+    fun editarAsignacion(id: Int) = "tarea/editar/$id/asignar"
 
     // Detalle de tarea
     const val DETALLE = "tarea/detalle/{id}"               // 07, 07b y 07c
@@ -33,8 +35,10 @@ object Rutas {
     const val CONFIG_HOGAR = "config"                      // 08 y 08h
     const val HABITACIONES = "config/habitaciones"         // 08b y 08c
     const val MIEMBROS = "config/miembros"                 // 08d
-    const val MIEMBRO = "config/miembro"                   // 08e
-    const val EDITAR_HABITACION = "config/habitacion/editar"   // 08f
+    const val MIEMBRO = "config/miembro/{persona}"         // 08e
+    const val EDITAR_HABITACION = "config/habitacion/editar/{indice}" // 08f
+    fun miembro(persona: String) = "config/miembro/$persona"          // persona = Persona.name
+    fun editarHabitacion(indice: Int) = "config/habitacion/editar/$indice"
     const val AGREGAR_HABITACION = "config/habitacion/agregar" // 08g
     const val HOGAR_MIEMBRO = "config/vista-miembro"       // 08i
 
