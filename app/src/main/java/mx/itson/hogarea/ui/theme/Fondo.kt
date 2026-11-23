@@ -3,20 +3,21 @@ package mx.itson.hogarea.ui.theme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 
 // El fondo de todas las pantallas
 @Composable
 fun FondoHogarea(content: @Composable () -> Unit) {
     val oscuro = LocalTema.current.oscuro
-    val indigo = if (oscuro) Color(0xFF262A6B) else Color(0xFFC9CCFB)
-    val brillo = if (oscuro) Color(0xB34A2213) else Color(0xBFFFCFBC)
+    val indigo = if (oscuro) FondoIndigoOscuro else FondoIndigo
+    val brillo = if (oscuro) FondoBrilloOscuro else FondoBrillo
     Box(
         Modifier
             .fillMaxSize()
@@ -31,5 +32,9 @@ fun FondoHogarea(content: @Composable () -> Unit) {
                     center = centro,
                 )
             }
-    ) { content() }
+    ) {
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
+            content()
+        }
+    }
 }

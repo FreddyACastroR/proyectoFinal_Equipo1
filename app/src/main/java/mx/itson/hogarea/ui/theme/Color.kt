@@ -43,9 +43,39 @@ val DarkColors = darkColorScheme(
     surfaceContainerHighest = Color(0xFF353640),
 )
 
-// Verde de "completada"
 val Exito = Color(0xFF2E7D32)
 val ExitoOscuro = Color(0xFF81C784)
 val ExitoContenedor = Color(0xFFC8E6C9)
 val ExitoContenedorOscuro = Color(0xFF1B5E20)
 val EnExitoContenedor = Color(0xFF0B3D10)
+
+val FondoIndigo = Color(0xFFC9CCFB)
+val FondoIndigoOscuro = Color(0xFF262A6B)
+val FondoBrillo = Color(0xBFFFCFBC)
+val FondoBrilloOscuro = Color(0xB34A2213)
+
+val Oro = Color(0xFF8A6500)
+val OroOscuro = Color(0xFFF2C94C)
+val Plata = Color(0xFF5F6670)
+val PlataOscuro = Color(0xFFC7CDD6)
+val Bronce = Color(0xFF8A4B20)
+val BronceOscuro = Color(0xFFE0A070)
+
+class ColorEtiqueta(
+    val nombre: String,
+    val claro: Color,
+    val enClaro: Color,
+    val oscuro: Color,
+    val enOscuro: Color,
+)
+
+val coloresEtiqueta = listOf(
+    ColorEtiqueta("Índigo", Color(0xFFE0E0FF), Color(0xFF0C0E62), Color(0xFF343BAE), Color(0xFFE0E0FF)),
+    ColorEtiqueta("Azul", Color(0xFFD5E3FF), Color(0xFF001B3C), Color(0xFF234776), Color(0xFFD5E3FF)),
+    ColorEtiqueta("Coral", Color(0xFFFFDBCF), Color(0xFF3A0B00), Color(0xFF7E2C0E), Color(0xFFFFDBCF)),
+    ColorEtiqueta("Verde", Color(0xFFC8E6C9), Color(0xFF0B3D10), Color(0xFF1B5E20), Color(0xFFC8E6C9)),
+    ColorEtiqueta("Amarillo", Color(0xFFFFE9A8), Color(0xFF2A1F00), Color(0xFF5C4500), Color(0xFFFFE9A8)),
+    ColorEtiqueta("Rosa", Color(0xFFFFD9E4), Color(0xFF3E0020), Color(0xFF7A2947), Color(0xFFFFD9E4)),
+    ColorEtiqueta("Turquesa", Color(0xFFC4EEF0), Color(0xFF002022), Color(0xFF0E5257), Color(0xFFC4EEF0)),
+    ColorEtiqueta("Morado", Color(0xFFEBDDFF), Color(0xFF22005D), Color(0xFF553A8C), Color(0xFFEBDDFF)),
+)
