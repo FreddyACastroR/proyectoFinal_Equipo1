@@ -32,7 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import mx.itson.hogarea.datos.Persona
+import mx.itson.hogarea.datos.Sesion
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
@@ -48,7 +48,7 @@ fun BienvenidaScreen(onCrear: () -> Unit, onUnirse: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Spacer(Modifier.height(24.dp))
-            Text("¡Hola, ${Persona.ANGEL.nombre}!", style = MaterialTheme.typography.headlineMedium)
+            Text("¡Hola, ${Sesion.usuario.nombre.substringBefore(" ")}!", style = MaterialTheme.typography.headlineMedium)
             Text(
                 "Para empezar, crea tu hogar o únete a uno con el código que te compartieron.",
                 style = MaterialTheme.typography.bodyLarge,
