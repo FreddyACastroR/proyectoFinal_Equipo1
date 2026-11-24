@@ -34,7 +34,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import mx.itson.hogarea.datos.DatosMuestra
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.ui.componentes.compartirCodigo
+import mx.itson.hogarea.ui.componentes.copiarCodigo
 import mx.itson.hogarea.ui.theme.EnExitoContenedor
 import mx.itson.hogarea.ui.theme.ExitoContenedor
 import mx.itson.hogarea.ui.theme.ExitoContenedorOscuro
@@ -46,7 +53,9 @@ import mx.itson.hogarea.ui.theme.LocalTema
 fun HogarCreadoScreen(onIrATareas: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val oscuro = LocalTema.current.oscuro
-    val hogar = DatosMuestra.casaNainari
+    val hogar = Sesion.hogarActivo
+    val contexto = LocalContext.current
+    var copiado by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -100,12 +109,19 @@ fun HogarCreadoScreen(onIrATareas: () -> Unit) {
                     Text("Código de invitación", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
                     Text(hogar.codigo, style = MaterialTheme.typography.displaySmall, color = cs.primary)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        FilledTonalButton(onClick = { }) {
-                            Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                        FilledTonalButton(onClick = {
+                            copiarCodigo(contexto, hogar.codigo)
+                            copiado = true
+                        }) {
+                            Icon(
+                                if (copiado) Icons.Filled.Check else Icons.Filled.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
                             Spacer(Modifier.width(8.dp))
-                            Text("Copiar")
+                            Text(if (copiado) "Copiado" else "Copiar")
                         }
-                        FilledTonalButton(onClick = { }) {
+                        FilledTonalButton(onClick = { compartirCodigo(contexto, hogar.nombre, hogar.codigo) }) {
                             Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Compartir")

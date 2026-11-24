@@ -42,27 +42,52 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableIntStateOf
+import mx.itson.hogarea.datos.DatosMuestra
+import mx.itson.hogarea.datos.Hogar
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.iconosHogar
 import mx.itson.hogarea.ui.componentes.BarraSuperior
+import mx.itson.hogarea.ui.componentes.SelectorIconoColor
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
-
-private val todas = listOf("Cocina", "Sala", "Baño", "Recámara principal", "Patio", "Lavandería", "Cochera")
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CrearHogarScreen(onAtras: () -> Unit, onCrear: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    var nombre by rememberSaveable { mutableStateOf("Casa Nainari") }
+    var nombre by rememberSaveable { mutableStateOf("") }
+    var icono by rememberSaveable { mutableIntStateOf(0) } // posición en iconosHogar
+    var color by rememberSaveable { mutableIntStateOf(0) } // posición en coloresEtiqueta
+    val todas = remember {
+        mutableStateListOf("Cocina", "Sala", "Baño", "Recámara principal", "Patio", "Lavandería", "Cochera")
+    }
     val elegidas = remember { mutableStateListOf("Cocina", "Sala", "Baño", "Recámara principal", "Patio") }
     var puedenEditar by rememberSaveable { mutableStateOf(true) }
+    var otra by remember { mutableStateOf<String?>(null) } // texto del diálogo "Otra habitación"; null = cerrado
 
     Scaffold(
         containerColor = Color.Transparent,
         topBar = { BarraSuperior("Crear hogar", onAtras = onAtras) },
         bottomBar = {
             Button(
-                onClick = onCrear,
-                enabled = nombre.isNotBlank(),
+                onClick = {
+                    DatosMuestra.guardarHogar(
+                        anterior = null,
+                        hogar = Hogar(
+                            nombre = nombre.trim(),
+                            creador = Sesion.usuario,
+                            miembros = listOf(Sesion.usuario),
+                            codigo = nombre.filter { it.isLetter() }.take(4).uppercase().padEnd(4, 'X') + "-4X7P",
+                            miembrosPuedenEditar = puedenEditar,
+                            icono = icono,
+                            color = color,
+                        ),
+                    )
+                    onCrear()
+                },
+                enabled = nombre.isNotBlank() && DatosMuestra.hogares.none { it.nombre == nombre.trim() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
@@ -83,15 +108,16 @@ fun CrearHogarScreen(onAtras: () -> Unit, onCrear: () -> Unit) {
                 value = nombre,
                 onValueChange = { nombre = it },
                 label = { Text("Nombre del hogar") },
-                leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                leadingIcon = { Icon(iconosHogar[icono], contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            SelectorIconoColor(iconosHogar, icono, { icono = it }, color, { color = it })
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Habitaciones", style = MaterialTheme.typography.titleSmall, color = cs.primary)
                 Text(
                     "Elige las que tiene tu casa. Podrás agregar más después.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant,
                 )
             }
@@ -109,7 +135,7 @@ fun CrearHogarScreen(onAtras: () -> Unit, onCrear: () -> Unit) {
                         },
                     )
                 }
-                TextButton(onClick = { }) {
+                TextButton(onClick = { otra = "" }) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text("Otra")
                 }
@@ -123,10 +149,37 @@ fun CrearHogarScreen(onAtras: () -> Unit, onCrear: () -> Unit) {
             }
             Text(
                 "Puedes cambiar esto cuando quieras en Configuración del hogar.",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = cs.onSurfaceVariant,
             )
         }
+    }
+
+    otra?.let { texto ->
+        val nueva = texto.trim()
+        AlertDialog(
+            onDismissRequest = { otra = null },
+            title = { Text("Otra habitación") },
+            text = {
+                OutlinedTextField(
+                    value = texto,
+                    onValueChange = { otra = it },
+                    label = { Text("Nombre de la habitación") },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        todas.add(nueva)
+                        elegidas.add(nueva)
+                        otra = null
+                    },
+                    enabled = nueva.isNotEmpty() && nueva !in todas,
+                ) { Text("Agregar") }
+            },
+            dismissButton = { TextButton(onClick = { otra = null }) { Text("Cancelar") } },
+        )
     }
 }
 
@@ -145,7 +198,7 @@ private fun OpcionPermiso(titulo: String, texto: String, seleccionada: Boolean, 
             RadioButton(selected = seleccionada, onClick = onClick)
             Column {
                 Text(titulo, style = MaterialTheme.typography.bodyLarge)
-                Text(texto, style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Text(texto, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
             }
         }
     }
