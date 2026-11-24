@@ -51,10 +51,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
 import mx.itson.hogarea.datos.Estado
+import mx.itson.hogarea.datos.textoDias
 import mx.itson.hogarea.ui.componentes.Avatar
 import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val formatoFecha = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale("es", "MX"))
 
 // 07 y 07d · Detalle de una tarea. Con puedeEditar = false es 07d (solo lectura).
 // La pantalla solo dibuja: lo que pasa al tocar cada botón lo decide quien la llama.
@@ -63,6 +68,7 @@ import mx.itson.hogarea.ui.theme.HogareaTheme
 fun DetalleTareaScreen(
     id: Int,
     puedeEditar: Boolean,
+    puedeCompletar: Boolean,
     onAtras: () -> Unit,
     onEditar: () -> Unit,
     onPausar: () -> Unit,
@@ -70,10 +76,15 @@ fun DetalleTareaScreen(
     onCompletar: () -> Unit,
 ) {
     val tarea = DatosMuestra.tareas.firstOrNull { it.id == id } ?: return
+    val hogar = DatosMuestra.hogar(tarea.hogar)
     val cs = MaterialTheme.colorScheme
     val completada = tarea.estado == Estado.COMPLETADA
-    // "Hoy · jueves 15" → "Jueves"; "Viernes 16" → "Viernes"
-    val nombreDia = tarea.dia.substringAfter("· ").substringBefore(" ").replaceFirstChar { it.uppercase() }
+    val fecha = tarea.fecha
+    val cuando = when {
+        tarea.dias.isNotEmpty() -> textoDias(tarea.dias)
+        fecha != null -> fecha.format(formatoFecha)
+        else -> tarea.dia.substringAfter("· ").substringBefore(" ").replaceFirstChar { it.uppercase() }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -81,14 +92,13 @@ fun DetalleTareaScreen(
             BarraSuperior("Detalle de la tarea", onAtras = onAtras) {
                 if (puedeEditar) {
                     IconButton(onClick = onEditar) { Icon(Icons.Filled.Edit, contentDescription = "Editar tarea") }
-                    IconButton(onClick = { }) { Icon(Icons.Filled.MoreVert, contentDescription = "Más opciones") }
                 }
             }
         },
         bottomBar = {
             Button(
                 onClick = onCompletar,
-                enabled = !completada,
+                enabled = !completada && puedeCompletar,
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
@@ -119,11 +129,16 @@ fun DetalleTareaScreen(
                 Etiqueta(Icons.Filled.Home, tarea.hogar, cs.surfaceContainerHigh, cs.onSurface)
             }
             Text(tarea.nombre, style = MaterialTheme.typography.headlineMedium)
-            if (tarea.descripcion.isNotEmpty()) {
-                Text(tarea.descripcion, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Descripción", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    tarea.descripcion.ifEmpty { "Sin descripción" },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = cs.onSurfaceVariant,
+                )
             }
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
-                Dato(Icons.Filled.CalendarToday, "Día", nombreDia)
+                Dato(Icons.Filled.CalendarToday, if (fecha != null) "Fecha" else "Día", cuando)
                 Dato(Icons.Filled.Repeat, "Recurrencia", tarea.recurrencia)
                 Dato(Icons.Filled.Shuffle, "Reparto", tarea.reparto)
                 Dato(Icons.Filled.Checklist, "Tipo", tarea.tipo)
@@ -161,8 +176,8 @@ fun DetalleTareaScreen(
                     }
                 }
                 Text(
-                    "Solo el creador del hogar o las personas asignadas pueden completar esta tarea. Eliminar pide tu huella.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Solo quien administra el hogar o las personas asignadas pueden completar esta tarea. Eliminar pide tu huella.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant,
                 )
             } else {
@@ -172,7 +187,7 @@ fun DetalleTareaScreen(
                     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(Icons.Filled.Visibility, contentDescription = null)
                         Text(
-                            "En este hogar solo puedes ver tus tareas y completarlas. Editar, pausar y eliminar le toca a Ángel, el creador.",
+                            "En este hogar solo puedes ver tus tareas y completarlas. Editar, pausar y eliminar le toca a ${hogar.creador.nombre.substringBefore(" ")}, quien lo administra.",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -182,7 +197,6 @@ fun DetalleTareaScreen(
     }
 }
 
-// Etiqueta de color: Pendiente, la habitación y el hogar
 @Composable
 private fun Etiqueta(icono: ImageVector, texto: String, fondo: Color, color: Color) {
     Row(
@@ -219,6 +233,7 @@ private fun DetalleTareaPreview() {
             DetalleTareaScreen(
                 id = 1,
                 puedeEditar = true,
+                puedeCompletar = true,
                 onAtras = {},
                 onEditar = {},
                 onPausar = {},
