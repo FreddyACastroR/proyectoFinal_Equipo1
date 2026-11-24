@@ -42,25 +42,42 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
 import mx.itson.hogarea.datos.Persona
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.Tarea
+import mx.itson.hogarea.datos.nombresDia
+import mx.itson.hogarea.datos.textoDias
 import mx.itson.hogarea.ui.componentes.Avatar
 import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-// 06b y 06d · Paso 2 del asistente: quién la hace y cómo se reparten
+private val formatoFecha = DateTimeFormatter.ofPattern("EEE d MMM", Locale("es", "MX"))
+
 @OptIn(ExperimentalMaterial3Api::class) // SegmentedButton es experimental en Material 3 1.2
 @Composable
-fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Unit) {
+fun AsignarTareaScreen(id: Int?, onAtras: () -> Unit, onGuardar: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    val hogar = DatosMuestra.casaNainari
-    val inicial = if (editar) listOf(Persona.RUBEN, Persona.FREDDY) else listOf(Persona.ANDRE, Persona.ANGEL, Persona.RUBEN)
+    val original = remember(id) { DatosMuestra.tareas.firstOrNull { it.id == id } }
+    val editar = original != null
+    val hogar = original?.let { DatosMuestra.hogar(it.hogar) } ?: Sesion.hogarActivo
+    val borrador = BorradorTarea
+    val inicial = original?.asignados ?: listOf(Sesion.usuario)
     val elegidos = remember { mutableStateListOf<Persona>().apply { addAll(inicial) } }
-    var porTurnos by rememberSaveable { mutableStateOf(true) }
+    var porTurnos by rememberSaveable { mutableStateOf(original?.reparto?.startsWith("En equipo") != true) }
     var alAzar by rememberSaveable { mutableStateOf(true) }
     var revuelto by remember { mutableStateOf<List<Persona>?>(null) }
     val base = revuelto ?: inicial
     val orden = base.filter { it in elegidos } + elegidos.filter { it !in base }
-    val fechas = if (editar) listOf("Jue 15 oct", "Jue 22 oct", "Jue 29 oct") else listOf("Sáb 17 oct", "Sáb 24 oct", "Sáb 31 oct")
+
+    val diasOrdenados = borrador.dias.sorted()
+    val turnos = if (diasOrdenados.isNotEmpty()) {
+        List(3) { nombresDia[diasOrdenados[it % diasOrdenados.size]] }
+    } else {
+        listOfNotNull(borrador.fecha?.format(formatoFecha))
+    }
+    val cuando = if (diasOrdenados.isNotEmpty()) textoDias(borrador.dias) else turnos.firstOrNull().orEmpty()
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -79,7 +96,41 @@ fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Un
                 )
             }
         },
-        bottomBar = { BotonesPaso("Atrás", onAtras, if (editar) "Guardar cambios" else "Guardar tarea", onGuardar) },
+        bottomBar = {
+            BotonesPaso(
+                textoIzq = "Atrás",
+                onIzq = onAtras,
+                textoDer = if (editar) "Guardar cambios" else "Guardar tarea",
+                onDer = {
+                    val reparto = when {
+                        orden.size == 1 -> "Solo una persona"
+                        porTurnos -> "Dividir días · ${if (alAzar) "al azar" else "manual"}"
+                        else -> "En equipo"
+                    }
+                    DatosMuestra.guardarTarea(
+                        Tarea(
+                            id = original?.id ?: DatosMuestra.nuevoIdTarea(),
+                            nombre = borrador.nombre,
+                            subtitulo = "${borrador.habitacion} · ${hogar.nombre}",
+                            dia = original?.dia ?: cuando,
+                            hogar = hogar.nombre,
+                            habitacion = borrador.habitacion,
+                            asignados = orden,
+                            estado = original?.estado ?: mx.itson.hogarea.datos.Estado.PENDIENTE,
+                            descripcion = borrador.descripcion,
+                            recurrencia = borrador.recurrencia,
+                            reparto = reparto,
+                            tipo = if (borrador.predeterminada) "Predeterminada de ${borrador.habitacion}" else "Manual",
+                            dias = borrador.dias,
+                            fecha = borrador.fecha,
+                            pausadaHasta = original?.pausadaHasta,
+                        ),
+                    )
+                    onGuardar()
+                },
+                derHabilitado = orden.isNotEmpty(),
+            )
+        },
     ) { padding ->
         Column(
             Modifier
@@ -107,7 +158,7 @@ fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Un
                                 Column(Modifier.weight(1f)) {
                                     Text(persona.nombre.substringBefore(" "), style = MaterialTheme.typography.titleSmall)
                                     Text(
-                                        if (persona == hogar.creador) "Creador" else "Roomie",
+                                        if (persona == hogar.creador) "Administrador" else DatosMuestra.rolDe(hogar, persona),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = cs.onSurfaceVariant,
                                     )
@@ -123,12 +174,8 @@ fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Un
             }
             Text("¿Cómo se reparten?", style = MaterialTheme.typography.titleSmall)
             OpcionReparto("En equipo", "Todos la hacen juntos el mismo día.", !porTurnos) { porTurnos = false }
-            OpcionReparto(
-                "Dividir días (turnos)",
-                "Se turnan: cada ${if (editar) "jueves" else "sábado"} le toca a uno.",
-                porTurnos,
-            ) { porTurnos = true }
-            if (porTurnos && orden.isNotEmpty()) {
+            OpcionReparto("Dividir días (turnos)", "Se turnan: cada vez le toca a uno.", porTurnos) { porTurnos = true }
+            if (porTurnos && orden.size > 1 && turnos.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Orden de los turnos", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                     TextButton(onClick = { revuelto = elegidos.shuffled() }) {
@@ -147,13 +194,13 @@ fun AsignarTareaScreen(editar: Boolean, onAtras: () -> Unit, onGuardar: () -> Un
                     }
                 }
                 Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
-                    fechas.forEachIndexed { i, fecha ->
+                    turnos.forEachIndexed { i, turno ->
                         val persona = orden[i % orden.size]
                         Row(
                             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(fecha, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(96.dp))
+                            Text(turno, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(104.dp))
                             Avatar(persona)
                             Spacer(Modifier.width(12.dp))
                             Text(persona.nombre.substringBefore(" "), style = MaterialTheme.typography.bodyLarge)
@@ -190,6 +237,14 @@ private fun OpcionReparto(titulo: String, texto: String, seleccionada: Boolean, 
 @Composable
 private fun AsignarTareaPreview() {
     HogareaTheme(oscuro = false, onCambiarTema = {}) {
-        FondoHogarea { AsignarTareaScreen(editar = false, onAtras = {}, onGuardar = {}) }
+        FondoHogarea { AsignarTareaScreen(id = null, onAtras = {}, onGuardar = {}) }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun AsignarTareaOscuroPreview() {
+    HogareaTheme(oscuro = true, onCambiarTema = {}) {
+        FondoHogarea { AsignarTareaScreen(id = 1, onAtras = {}, onGuardar = {}) }
     }
 }
