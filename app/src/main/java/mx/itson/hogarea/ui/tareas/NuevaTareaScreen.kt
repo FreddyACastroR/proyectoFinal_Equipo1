@@ -18,16 +18,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Weekend
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -49,28 +44,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
+import mx.itson.hogarea.datos.nombresDia
 import mx.itson.hogarea.ui.componentes.BarraSuperior
+import mx.itson.hogarea.ui.componentes.CampoFecha
+import mx.itson.hogarea.ui.componentes.CampoSelector
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
+import java.time.LocalDate
 
-// 06a, 06e y 06c · Paso 1 del asistente. editar = true es 06c (Barrer la sala ya llenada)
+internal object BorradorTarea {
+    var predeterminada = false
+    var nombre = ""
+    var descripcion = ""
+    var habitacion = "Sala"
+    var dias: Set<Int> = emptySet()
+    var fecha: LocalDate? = null
+    var recurrencia = "Semanal"
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () -> Unit) {
+fun NuevaTareaScreen(id: Int?, onCancelar: () -> Unit, onSiguiente: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    var predeterminada by rememberSaveable { mutableStateOf(editar) }
-    var nombre by rememberSaveable { mutableStateOf("Trapear la sala") }
-    var descripcion by rememberSaveable {
-        mutableStateOf(if (editar) "Debajo de sillones y mesa de centro" else "Mover sillones y usar limpiador")
-    }
-    var habitacion by rememberSaveable { mutableStateOf("Sala") }
-    var elegida by rememberSaveable { mutableStateOf(if (editar) "Barrer la sala" else "") }
-    var dia by rememberSaveable { mutableIntStateOf(if (editar) 3 else 5) }
-    var recurrencia by rememberSaveable { mutableIntStateOf(0) }
+    val original = remember(id) { DatosMuestra.tareas.firstOrNull { it.id == id } }
+    val editar = original != null
+    var predeterminada by rememberSaveable { mutableStateOf(original?.tipo?.startsWith("Predeterminada") ?: false) }
+    var nombre by rememberSaveable { mutableStateOf(original?.nombre ?: "") }
+    var descripcion by rememberSaveable { mutableStateOf(original?.descripcion ?: "") }
+    var habitacion by rememberSaveable { mutableStateOf(original?.habitacion ?: "Sala") }
+    var elegida by rememberSaveable { mutableStateOf(if (predeterminada) original?.nombre ?: "" else "") }
+    var dias by rememberSaveable { mutableStateOf(original?.dias ?: emptySet()) }
+    var fecha by rememberSaveable { mutableStateOf(original?.fecha) }
+    var recurrencia by rememberSaveable { mutableIntStateOf(recurrencias.indexOf(original?.recurrencia).coerceAtLeast(0)) }
+
+    val completo = if (predeterminada) elegida.isNotEmpty() && dias.isNotEmpty() else nombre.isNotBlank() && fecha != null
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -89,7 +100,24 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                 )
             }
         },
-        bottomBar = { BotonesPaso("Cancelar", onCancelar, "Siguiente", onSiguiente) },
+        bottomBar = {
+            BotonesPaso(
+                textoIzq = "Cancelar",
+                onIzq = onCancelar,
+                textoDer = "Siguiente",
+                onDer = {
+                    BorradorTarea.predeterminada = predeterminada
+                    BorradorTarea.nombre = if (predeterminada) elegida else nombre.trim()
+                    BorradorTarea.descripcion = descripcion.trim()
+                    BorradorTarea.habitacion = habitacion
+                    BorradorTarea.dias = if (predeterminada) dias else emptySet()
+                    BorradorTarea.fecha = if (predeterminada) null else fecha
+                    BorradorTarea.recurrencia = if (predeterminada) recurrencias[recurrencia] else "Una sola vez"
+                    onSiguiente()
+                },
+                derHabilitado = completo,
+            )
+        },
     ) { padding ->
         Column(
             Modifier
@@ -111,8 +139,8 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
             }
             if (!predeterminada) {
                 Text(
-                    "Las predeterminadas las define el creador del hogar para cada habitación.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Una tarea manual se hace una sola vez, en la fecha que elijas.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant,
                 )
                 OutlinedTextField(
@@ -130,7 +158,7 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            CampoMenu(
+            CampoSelector(
                 etiqueta = "Habitación",
                 valor = habitacion,
                 opciones = DatosMuestra.habitaciones.map { it.nombre } + listOf("Toda la casa", "No aplica"),
@@ -141,13 +169,9 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                 icono = Icons.Filled.Weekend,
             )
             if (!predeterminada) {
-                Text(
-                    "También puedes elegir “Toda la casa” o “No aplica”.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = cs.onSurfaceVariant,
-                )
-            }
-            if (predeterminada) {
+
+                CampoFecha("Fecha", fecha, { fecha = it }, Modifier.fillMaxWidth())
+            } else {
                 val lista = DatosMuestra.habitaciones.firstOrNull { it.nombre == habitacion }?.predeterminadas.orEmpty()
                 Etiqueta("Elige una tarea predeterminada de $habitacion")
                 if (lista.isEmpty()) {
@@ -167,87 +191,45 @@ fun NuevaTareaScreen(editar: Boolean, onCancelar: () -> Unit, onSiguiente: () ->
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-            }
-            Etiqueta("Día de la semana")
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                dias.forEachIndexed { i, letra ->
-                    val marcado = dia == i
-                    Box(
-                        Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(if (marcado) cs.primary else Color.Transparent)
-                            .border(1.dp, if (marcado) cs.primary else cs.outline, CircleShape)
-                            .clickable { dia = i },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(letra, color = if (marcado) cs.onPrimary else cs.onSurface)
+
+                Etiqueta("Días de la semana")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    letrasDia.forEachIndexed { i, letra ->
+                        val marcado = i in dias
+                        Box(
+                            Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (marcado) cs.primary else Color.Transparent)
+                                .border(1.dp, if (marcado) cs.primary else cs.outline, CircleShape)
+                                .clickable(onClickLabel = nombresDia[i]) { dias = if (marcado) dias - i else dias + i },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(letra, color = if (marcado) cs.onPrimary else cs.onSurface)
+                        }
                     }
                 }
-            }
-            Etiqueta("Recurrencia")
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                recurrencias.forEachIndexed { i, texto ->
-                    SegmentedButton(
-                        selected = recurrencia == i,
-                        onClick = { recurrencia = i },
-                        shape = SegmentedButtonDefaults.itemShape(index = i, count = recurrencias.size),
-                    ) { Text(texto) }
+                Etiqueta("Recurrencia")
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    recurrencias.forEachIndexed { i, texto ->
+                        SegmentedButton(
+                            selected = recurrencia == i,
+                            onClick = { recurrencia = i },
+                            shape = SegmentedButtonDefaults.itemShape(index = i, count = recurrencias.size),
+                        ) { Text(texto) }
+                    }
                 }
             }
         }
     }
 }
 
-private val dias = listOf("L", "M", "M", "J", "V", "S", "D")
+private val letrasDia = listOf("L", "M", "M", "J", "V", "S", "D")
 private val recurrencias = listOf("Semanal", "Cada 15 días", "Mensual")
 
 @Composable
 private fun Etiqueta(texto: String) {
     Text(texto, style = MaterialTheme.typography.titleSmall)
-}
-
-// Campo de solo lectura que abre un menú con la flecha
-@Composable
-private fun CampoMenu(
-    etiqueta: String,
-    valor: String,
-    opciones: List<String>,
-    onElegir: (String) -> Unit,
-    icono: ImageVector? = null,
-) {
-    var abierto by remember { mutableStateOf(false) }
-    Box {
-        OutlinedTextField(
-            value = valor,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(etiqueta) },
-            leadingIcon = if (icono != null) {
-                { Icon(icono, contentDescription = null) }
-            } else {
-                null
-            },
-            trailingIcon = {
-                IconButton(onClick = { abierto = true }) {
-                    Icon(Icons.Filled.ArrowDropDown, contentDescription = "Elegir $etiqueta")
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            opciones.forEach { opcion ->
-                DropdownMenuItem(
-                    text = { Text(opcion) },
-                    onClick = {
-                        onElegir(opcion)
-                        abierto = false
-                    },
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -268,15 +250,21 @@ private fun OpcionRadio(texto: String, seleccionada: Boolean, onClick: () -> Uni
     }
 }
 
-// Los dos botones de abajo del asistente (también los usa AsignarTareaScreen)
+
 @Composable
-internal fun BotonesPaso(textoIzq: String, onIzq: () -> Unit, textoDer: String, onDer: () -> Unit) {
+internal fun BotonesPaso(
+    textoIzq: String,
+    onIzq: () -> Unit,
+    textoDer: String,
+    onDer: () -> Unit,
+    derHabilitado: Boolean = true,
+) {
     Row(
         Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         OutlinedButton(onClick = onIzq, modifier = Modifier.weight(1f).height(48.dp)) { Text(textoIzq) }
-        Button(onClick = onDer, modifier = Modifier.weight(1f).height(48.dp)) { Text(textoDer) }
+        Button(onClick = onDer, enabled = derHabilitado, modifier = Modifier.weight(1f).height(48.dp)) { Text(textoDer) }
     }
 }
 
@@ -284,6 +272,14 @@ internal fun BotonesPaso(textoIzq: String, onIzq: () -> Unit, textoDer: String, 
 @Composable
 private fun NuevaTareaPreview() {
     HogareaTheme(oscuro = false, onCambiarTema = {}) {
-        FondoHogarea { NuevaTareaScreen(editar = false, onCancelar = {}, onSiguiente = {}) }
+        FondoHogarea { NuevaTareaScreen(id = null, onCancelar = {}, onSiguiente = {}) }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun NuevaTareaOscuroPreview() {
+    HogareaTheme(oscuro = true, onCambiarTema = {}) {
+        FondoHogarea { NuevaTareaScreen(id = 1, onCancelar = {}, onSiguiente = {}) }
     }
 }
