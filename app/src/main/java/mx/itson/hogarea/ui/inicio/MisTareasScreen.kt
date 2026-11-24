@@ -30,7 +30,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
 import mx.itson.hogarea.datos.Estado
-import mx.itson.hogarea.datos.Persona
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.puedeEditarTareas
 import mx.itson.hogarea.ui.componentes.BarraInferior
 import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.navegacion.Rutas
@@ -51,22 +52,23 @@ fun MisTareasScreen(
     var hogar by rememberSaveable { mutableStateOf(if (soloLectura) DatosMuestra.depaObregon.nombre else TODOS) }
     val opciones = listOf(TODOS) + DatosMuestra.hogares.map { it.nombre }
 
-    // 05: las tareas de Rubén (el usuario de la muestra). 05b: todas las del hogar.
     val tareas = DatosMuestra.tareas.filter {
         if (soloLectura) it.hogar == hogar
-        else Persona.RUBEN in it.asignados && (hogar == TODOS || it.hogar == hogar)
+        else Sesion.usuario in it.asignados && (hogar == TODOS || it.hogar == hogar)
     }
     val deHoy = tareas.filter { it.dia.startsWith("Hoy") }
     val hechasHoy = deHoy.count { it.estado == Estado.COMPLETADA }
     val totalHoy = deHoy.count { it.estado != Estado.PAUSADA }
-    val puedeCrear = !soloLectura &&
-            (hogar == TODOS || DatosMuestra.hogares.first { it.nombre == hogar }.miembrosPuedenEditar)
+    val puedeCrear = !soloLectura && if (hogar == TODOS) {
+        puedeEditarTareas(Sesion.hogarActivo)
+    } else {
+        puedeEditarTareas(DatosMuestra.hogar(hogar))
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
             BarraSuperior("Mis tareas") {
-                IconButton(onClick = { }) { Icon(Icons.Filled.CalendarMonth, contentDescription = "Calendario") }
                 IconButton(onClick = onNotificaciones) {
                     Icon(Icons.Filled.Notifications, contentDescription = "Notificaciones")
                 }
@@ -92,7 +94,15 @@ fun MisTareasScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SelectorHogar(hogar, if (soloLectura) listOf(hogar) else opciones, onElegir = { hogar = it })
+            SelectorHogar(
+                hogar,
+                if (soloLectura) listOf(hogar) else opciones,
+                onElegir = { elegido ->
+                    hogar = elegido
+                    // El hogar elegido es el activo: ahí se crean las tareas nuevas
+                    DatosMuestra.hogares.firstOrNull { it.nombre == elegido }?.let { Sesion.hogarActivo = it }
+                },
+            )
             if (soloLectura) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer),
