@@ -48,6 +48,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import mx.itson.hogarea.datos.CONTRASENA_MUESTRA
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.correoValido
 import mx.itson.hogarea.ui.componentes.HojaHuella
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
@@ -59,6 +62,7 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
     var contrasena by rememberSaveable { mutableStateOf("hogarea123") }
     var verContrasena by rememberSaveable { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf(false) } // 01c
+    var errorCorreo by rememberSaveable { mutableStateOf(false) } // 01e
     var huella by remember { mutableStateOf(false) } // 01b
 
     Scaffold(containerColor = Color.Transparent) { padding ->
@@ -91,7 +95,17 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
             )
             OutlinedTextField(
                 value = correo,
-                onValueChange = { correo = it },
+                onValueChange = {
+                    correo = it
+                    errorCorreo = false
+                    error = false
+                },
+                isError = errorCorreo,
+                supportingText = if (errorCorreo) {
+                    { Text("Escribe un correo válido, como nombre@correo.com") }
+                } else {
+                    null
+                },
                 label = { Text("Correo electrónico") },
                 leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -129,7 +143,13 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
                 Text("¿Olvidaste tu contraseña?")
             }
             Button(
-                onClick = { if (contrasena == "hogarea123") onEntrar() else error = true },
+                onClick = {
+                    when {
+                        !correoValido(correo) -> errorCorreo = true
+                        Sesion.iniciar(correo, contrasena) -> onEntrar()
+                        else -> error = true
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) { Text("Iniciar sesión") }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,6 +179,8 @@ fun LoginScreen(onEntrar: () -> Unit, onOlvide: () -> Unit, onRegistro: () -> Un
             onCancelar = { huella = false },
             onSensor = {
                 huella = false
+                // La huella entra con la cuenta del correo escrito; si no es de muestra, con la última
+                Sesion.iniciar(correo, CONTRASENA_MUESTRA)
                 onEntrar()
             },
             textoCancelar = "Usar contraseña",
