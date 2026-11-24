@@ -42,7 +42,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import mx.itson.hogarea.datos.contrasenaValida
+import mx.itson.hogarea.datos.correoValido
 import mx.itson.hogarea.ui.componentes.BarraSuperior
+import mx.itson.hogarea.ui.componentes.CampoFecha
+import mx.itson.hogarea.ui.componentes.CampoSelector
+import java.time.LocalDate
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
@@ -51,12 +56,14 @@ fun RegistroScreen(onAtras: () -> Unit, onCrearCuenta: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     var nombre by rememberSaveable { mutableStateOf("Ángel") }
     var genero by rememberSaveable { mutableStateOf("Masculino") }
-    var nacimiento by rememberSaveable { mutableStateOf("12/03/2004") }
+    var nacimiento by rememberSaveable { mutableStateOf<LocalDate?>(LocalDate.of(2004, 3, 12)) }
     var correo by rememberSaveable { mutableStateOf("angel@correo.com") }
     var contrasena by rememberSaveable { mutableStateOf("hogarea123") }
     var confirmar by rememberSaveable { mutableStateOf("hogarea123") }
     var terminos by rememberSaveable { mutableStateOf(true) }
     val coinciden = contrasena == confirmar
+    val correoBien = correoValido(correo)
+    val contrasenaBien = contrasenaValida(contrasena)
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -83,20 +90,24 @@ fun RegistroScreen(onAtras: () -> Unit, onCrearCuenta: () -> Unit) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CampoGenero(genero, { genero = it }, Modifier.weight(1f))
-                OutlinedTextField(
-                    value = nacimiento,
-                    onValueChange = { nacimiento = it },
-                    label = { Text("Nacimiento") },
-                    trailingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+
+            CampoSelector(
+                etiqueta = "Género",
+                valor = genero,
+                opciones = listOf("Femenino", "Masculino", "Otro", "Prefiero no decir"),
+                onElegir = { genero = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            CampoFecha("Nacimiento", nacimiento, { nacimiento = it }, Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = correo,
                 onValueChange = { correo = it },
+                isError = correo.isNotEmpty() && !correoBien,
+                supportingText = if (correo.isNotEmpty() && !correoBien) {
+                    { Text("Escribe un correo válido, como nombre@correo.com") }
+                } else {
+                    null
+                },
                 label = { Text("Correo electrónico") },
                 leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -108,6 +119,7 @@ fun RegistroScreen(onAtras: () -> Unit, onCrearCuenta: () -> Unit) {
                 onValueChange = { contrasena = it },
                 label = { Text("Contraseña") },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                isError = contrasena.isNotEmpty() && !contrasenaBien,
                 supportingText = { Text("Mínimo 8 caracteres e incluye un número") },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -139,7 +151,7 @@ fun RegistroScreen(onAtras: () -> Unit, onCrearCuenta: () -> Unit) {
             }
             Button(
                 onClick = onCrearCuenta,
-                enabled = terminos && coinciden && nombre.isNotBlank(),
+                enabled = terminos && coinciden && nombre.isNotBlank() && correoBien && contrasenaBien && nacimiento != null,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) { Text("Crear cuenta") }
             Row(
@@ -149,36 +161,6 @@ fun RegistroScreen(onAtras: () -> Unit, onCrearCuenta: () -> Unit) {
             ) {
                 Text("¿Ya tienes cuenta?", color = cs.onSurfaceVariant)
                 TextButton(onClick = onAtras) { Text("Inicia sesión") }
-            }
-        }
-    }
-}
-@Composable
-private fun CampoGenero(valor: String, onElegir: (String) -> Unit, modifier: Modifier) {
-    var abierto by remember { mutableStateOf(false) }
-    Box(modifier) {
-        OutlinedTextField(
-            value = valor,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Género") },
-            trailingIcon = {
-                IconButton(onClick = { abierto = true }) {
-                    Icon(Icons.Filled.ArrowDropDown, contentDescription = "Elegir género")
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            listOf("Femenino", "Masculino", "Otro", "Prefiero no decir").forEach { opcion ->
-                DropdownMenuItem(
-                    text = { Text(opcion) },
-                    onClick = {
-                        onElegir(opcion)
-                        abierto = false
-                    },
-                )
             }
         }
     }

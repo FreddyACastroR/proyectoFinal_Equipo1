@@ -12,7 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.ui.text.input.KeyboardType
+import mx.itson.hogarea.datos.correoValido
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material3.Button
@@ -41,9 +45,11 @@ import mx.itson.hogarea.ui.theme.HogareaTheme
 @Composable
 fun RecuperarScreen(onAtras: () -> Unit) {
     var correo by rememberSaveable { mutableStateOf("angel@correo.com") }
+    var errorCorreo by rememberSaveable { mutableStateOf(false) }
+    var enviado by rememberSaveable { mutableStateOf(false) }
     val cs = MaterialTheme.colorScheme
     Scaffold(
-        containerColor = Color.Transparent, // el fondo lo pone FondoHogarea
+        containerColor = Color.Transparent,
         topBar = { BarraSuperior("Recuperar contraseña", onAtras = onAtras) },
     ) { padding ->
         Column(
@@ -60,28 +66,61 @@ fun RecuperarScreen(onAtras: () -> Unit) {
                 Icon(Icons.Filled.Key, contentDescription = null, tint = cs.onPrimaryContainer)
             }
             Text("¿Olvidaste tu contraseña?", style = MaterialTheme.typography.headlineSmall)
-            Text(
-                "Escribe el correo con el que te registraste y te enviaremos un enlace para crear una nueva.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = cs.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                value = correo,
-                onValueChange = { correo = it },
-                label = { Text("Correo electrónico") },
-                leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(onClick = onAtras, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                Text("Enviar enlace")
+            if (enviado) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = cs.primaryContainer,
+                        contentColor = cs.onPrimaryContainer,
+                    ),
+                ) {
+                    Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                        Text(
+                            "Te enviamos el enlace a ${correo.trim()}. Ábrelo desde tu correo para crear tu nueva contraseña.",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+                Button(onClick = onAtras, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    Text("Volver a iniciar sesión")
+                }
+            } else {
+                Text(
+                    "Escribe el correo con el que te registraste y te enviaremos un enlace para crear una nueva.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = cs.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = correo,
+                    onValueChange = {
+                        correo = it
+                        errorCorreo = false
+                    },
+                    isError = errorCorreo,
+                    supportingText = if (errorCorreo) {
+                        { Text("Escribe un correo válido, como nombre@correo.com") }
+                    } else {
+                        null
+                    },
+                    label = { Text("Correo electrónico") },
+                    leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = { if (correoValido(correo)) enviado = true else errorCorreo = true },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) {
+                    Text("Enviar enlace")
+                }
             }
             Card(colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
                 Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Filled.Info, contentDescription = null, tint = cs.onSurfaceVariant)
                     Text(
                         "El enlace vence en 30 minutos. Si no llega, revisa tu carpeta de spam.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             }
