@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import mx.itson.hogarea.datos.iconosHabitacion
+import mx.itson.hogarea.ui.theme.LocalTema
+import mx.itson.hogarea.ui.theme.coloresEtiqueta
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bathtub
@@ -57,7 +60,7 @@ import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
 @Composable
-fun HabitacionesScreen(onAtras: () -> Unit, onEditar: () -> Unit, onAgregar: () -> Unit) {
+fun HabitacionesScreen(onAtras: () -> Unit, onEditar: (indice: Int, agregarTarea: Boolean) -> Unit, onAgregar: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     var aEliminar by remember { mutableStateOf<Habitacion?>(null) }
     Scaffold(
@@ -85,8 +88,14 @@ fun HabitacionesScreen(onAtras: () -> Unit, onEditar: () -> Unit, onAgregar: () 
                     color = cs.onSurfaceVariant,
                 )
             }
-            items(DatosMuestra.habitaciones) { habitacion ->
-                TarjetaHabitacion(habitacion, onEditar = onEditar, onEliminar = { aEliminar = habitacion })
+            itemsIndexed(DatosMuestra.habitaciones) { indice, habitacion ->
+                TarjetaHabitacion(
+                    habitacion,
+                    onEditar = { onEditar(indice, false) },
+                    // 4.7 · "+ Tarea" abre esta habitación con el diálogo de tarea nueva
+                    onAgregarTarea = { onEditar(indice, true) },
+                    onEliminar = { aEliminar = habitacion },
+                )
             }
         }
     }
@@ -96,30 +105,44 @@ fun HabitacionesScreen(onAtras: () -> Unit, onEditar: () -> Unit, onAgregar: () 
             titulo = "Eliminar “${h.nombre}”",
             texto = "También se eliminarán sus ${h.predeterminadas.size} tareas predeterminadas. Usa tu huella para confirmar.",
             onCancelar = { aEliminar = null },
-            onSensor = { aEliminar = null },
+            onSensor = {
+                DatosMuestra.habitaciones.remove(h) // ahora sí se elimina
+                aEliminar = null
+            },
         )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TarjetaHabitacion(habitacion: Habitacion, onEditar: () -> Unit, onEliminar: () -> Unit) {
+private fun TarjetaHabitacion(
+    habitacion: Habitacion,
+    onEditar: () -> Unit,
+    onAgregarTarea: () -> Unit,
+    onEliminar: () -> Unit,
+) {
     val cs = MaterialTheme.colorScheme
+    val etiqueta = coloresEtiqueta[habitacion.color]
+    val oscuro = LocalTema.current.oscuro
     Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(cs.secondaryContainer),
+                    Modifier.size(40.dp).clip(CircleShape).background(if (oscuro) etiqueta.oscuro else etiqueta.claro),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(iconoDe(habitacion.nombre), contentDescription = null, tint = cs.onSecondaryContainer)
+                    Icon(
+                        iconosHabitacion[habitacion.icono],
+                        contentDescription = null,
+                        tint = if (oscuro) etiqueta.enOscuro else etiqueta.enClaro,
+                    )
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(habitacion.nombre, style = MaterialTheme.typography.titleMedium)
                     Text(
                         "${habitacion.predeterminadas.size} tareas",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = cs.onSurfaceVariant,
                     )
                 }
@@ -132,9 +155,9 @@ private fun TarjetaHabitacion(habitacion: Habitacion, onEditar: () -> Unit, onEl
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 habitacion.predeterminadas.forEach { tarea ->
-                    SuggestionChip(onClick = { }, label = { Text(tarea) })
+                    SuggestionChip(onClick = onEditar, label = { Text(tarea) })
                 }
-                TextButton(onClick = { }) {
+                TextButton(onClick = onAgregarTarea) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text("Tarea")
                 }
@@ -156,6 +179,6 @@ internal fun iconoDe(habitacion: String): ImageVector = when (habitacion) {
 @Composable
 private fun HabitacionesPreview() {
     HogareaTheme(oscuro = false, onCambiarTema = {}) {
-        FondoHogarea { HabitacionesScreen(onAtras = {}, onEditar = {}, onAgregar = {}) }
+        FondoHogarea { HabitacionesScreen(onAtras = {}, onEditar = { _, _ -> }, onAgregar = {}) }
     }
 }
