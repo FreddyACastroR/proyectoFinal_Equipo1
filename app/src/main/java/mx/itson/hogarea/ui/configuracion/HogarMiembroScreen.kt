@@ -20,9 +20,13 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.iconosHogar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -54,10 +58,12 @@ import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
 @Composable
-fun HogarMiembroScreen(onIrPestana: (String) -> Unit, onVerComoCreador: () -> Unit, onSalir: () -> Unit) {
-    val hogar = DatosMuestra.depaObregon
+fun HogarMiembroScreen(onIrPestana: (String) -> Unit, onSalir: () -> Unit) {
+    val hogar = Sesion.hogarActivo
+    val yo = Sesion.usuario
     val cs = MaterialTheme.colorScheme
     var menuAbierto by remember { mutableStateOf(false) }
+    var confirmarSalir by remember { mutableStateOf(false) } // 08k
     val sinFondo = ListItemDefaults.colors(containerColor = Color.Transparent)
 
     Scaffold(
@@ -80,19 +86,19 @@ fun HogarMiembroScreen(onIrPestana: (String) -> Unit, onVerComoCreador: () -> Un
                         onClick = { menuAbierto = true },
                         label = { Text(hogar.nombre) },
                         leadingIcon = {
-                            Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+                            Icon(iconosHogar[hogar.icono], contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
                         },
                         trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
                         colors = AssistChipDefaults.assistChipColors(containerColor = cs.secondaryContainer),
                         border = null,
                     )
                     DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
-                        DatosMuestra.hogares.forEach { h ->
+                        DatosMuestra.hogares.filter { yo in it.miembros }.forEach { h ->
                             DropdownMenuItem(
                                 text = { Text(h.nombre) },
                                 onClick = {
                                     menuAbierto = false
-                                    if (h != hogar) onVerComoCreador()
+                                    Sesion.hogarActivo = h
                                 },
                             )
                         }
@@ -105,8 +111,8 @@ fun HogarMiembroScreen(onIrPestana: (String) -> Unit, onVerComoCreador: () -> Un
                 Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Filled.Lock, contentDescription = null)
                     Text(
-                        "Eres miembro de este hogar. Solo ${hogar.creador.nombre}, su creador, puede cambiar la configuración.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        "Eres miembro de este hogar. Solo ${hogar.creador.nombre}, quien lo administra, puede cambiar la configuración y los roles.",
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             }
@@ -114,30 +120,36 @@ fun HogarMiembroScreen(onIrPestana: (String) -> Unit, onVerComoCreador: () -> Un
                 ListItem(
                     headlineContent = { Text(hogar.nombre) },
                     supportingContent = { Text("Creado por ${hogar.creador.nombre} · ${hogar.miembros.size} miembros") },
-                    leadingContent = { Icon(Icons.Filled.Home, contentDescription = null) },
+                    leadingContent = { Icon(iconosHogar[hogar.icono], contentDescription = null) },
                     colors = sinFondo,
                 )
                 ListItem(
-                    headlineContent = { Text("Tu rol: Roomie") },
-                    supportingContent = { Text("Ver tareas y completar las tuyas") },
+                    headlineContent = { Text("Tu rol: ${DatosMuestra.rolDe(hogar, yo)}") },
+                    supportingContent = {
+                        Text(
+                            if (hogar.miembrosPuedenEditar) "Ver, crear y editar tareas, y completar las tuyas"
+                            else "Ver tareas y completar las tuyas",
+                        )
+                    },
                     leadingContent = { Icon(Icons.Filled.Person, contentDescription = null) },
                     colors = sinFondo,
                 )
             }
-            Text("Miembros", style = MaterialTheme.typography.titleSmall, color = cs.primary)
+            Text("Habitantes (${hogar.miembros.size})", style = MaterialTheme.typography.titleSmall, color = cs.primary)
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
                 hogar.miembros.forEach { persona ->
                     val nombre = persona.nombre.substringBefore(" ")
+                    val rol = DatosMuestra.rolDe(hogar, persona)
                     ListItem(
-                        headlineContent = { Text(if (persona == Persona.ANDRE) "$nombre (tú)" else nombre) },
-                        supportingContent = { Text(if (persona == hogar.creador) "Creador del hogar" else "Roomie · Miembro") },
+                        headlineContent = { Text(if (persona == yo) "$nombre (tú)" else nombre) },
+                        supportingContent = { Text(if (persona == hogar.creador) "$rol · Administra el hogar" else "$rol · Miembro") },
                         leadingContent = { Avatar(persona, tamano = 40.dp) },
                         colors = sinFondo,
                     )
                 }
             }
             OutlinedButton(
-                onClick = onSalir,
+                onClick = { confirmarSalir = true },
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.error),
                 border = BorderStroke(1.dp, cs.error),
                 modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -149,12 +161,28 @@ fun HogarMiembroScreen(onIrPestana: (String) -> Unit, onVerComoCreador: () -> Un
             Spacer(Modifier.height(8.dp))
         }
     }
+
+    if (confirmarSalir) {
+        AlertDialog(
+            onDismissRequest = { confirmarSalir = false },
+            title = { Text("¿Salir de ${hogar.nombre}?") },
+            text = { Text("Dejarás de ver sus tareas. Podrás volver a unirte con el código de invitación.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmarSalir = false
+                    DatosMuestra.quitarDelHogar(hogar, yo)
+                    onSalir()
+                }) { Text("Salir", color = cs.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmarSalir = false }) { Text("Cancelar") } },
+        )
+    }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun HogarMiembroPreview() {
     HogareaTheme(oscuro = false, onCambiarTema = {}) {
-        FondoHogarea { HogarMiembroScreen(onIrPestana = {}, onVerComoCreador = {}, onSalir = {}) }
+        FondoHogarea { HogarMiembroScreen(onIrPestana = {}, onSalir = {}) }
     }
 }
