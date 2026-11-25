@@ -47,9 +47,17 @@ import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
 import mx.itson.hogarea.datos.Persona
 import mx.itson.hogarea.ui.componentes.Avatar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.ui.draw.clip
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.iconosHogar
 import mx.itson.hogarea.ui.componentes.BarraInferior
 import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.navegacion.Rutas
+import mx.itson.hogarea.ui.theme.coloresEtiqueta
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 import mx.itson.hogarea.ui.theme.LocalTema
@@ -62,9 +70,10 @@ fun PerfilScreen(
     onPuntos: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
-    val yo = Persona.ANDRE
-    val puntos = DatosMuestra.puntos.first { it.first == yo }.second
-    val completadas = DatosMuestra.completadasDelMes.first { it.first == yo }.second
+    val yo = Sesion.usuario
+    val oscuro = LocalTema.current.oscuro
+    val puntos = DatosMuestra.puntos.firstOrNull { it.first == yo }?.second ?: 0
+    val completadas = DatosMuestra.completadasDelMes.firstOrNull { it.first == yo }?.second ?: 0
     var recordatorios by rememberSaveable { mutableStateOf(true) }
     var huella by rememberSaveable { mutableStateOf(true) }
     val tema = LocalTema.current
@@ -115,27 +124,45 @@ fun PerfilScreen(
 
             Titulo("Mis hogares y mi rol")
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
-                DatosMuestra.hogares.forEach { hogar ->
-                    val permiso = if (hogar.miembrosPuedenEditar) "puede editar" else "solo ver"
+
+                DatosMuestra.hogares.filter { yo in it.miembros }.forEach { hogar ->
+                    val etiqueta = coloresEtiqueta[hogar.color]
+                    val papel = if (hogar.creador == yo) "Administrador" else "Miembro"
                     ListItem(
                         headlineContent = { Text(hogar.nombre) },
-                        supportingContent = { Text("Roomie · $permiso") },
-                        leadingContent = { Icon(Icons.Filled.Home, contentDescription = null) },
+                        supportingContent = { Text("Rol: ${DatosMuestra.rolDe(hogar, yo)} · $papel") },
+                        leadingContent = {
+                            Box(
+                                Modifier.size(40.dp).clip(CircleShape).background(if (oscuro) etiqueta.oscuro else etiqueta.claro),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    iconosHogar[hogar.icono],
+                                    contentDescription = null,
+                                    tint = if (oscuro) etiqueta.enOscuro else etiqueta.enClaro,
+                                )
+                            }
+                        },
+                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
+                            Sesion.hogarActivo = hogar
+                            onIrPestana(Rutas.CONFIG_HOGAR)
+                        },
                     )
                 }
             }
 
             Titulo("Preferencias")
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
+
+                FilaInterruptor(Icons.Filled.DarkMode, "Tema oscuro", "Colores oscuros en toda la app", tema.oscuro, tema.cambiar)
                 FilaInterruptor(Icons.Filled.Notifications, "Recordatorios", "Avisarme cuando me toque una tarea", recordatorios) {
                     recordatorios = it
                 }
                 FilaInterruptor(Icons.Filled.Fingerprint, "Entrar con huella", "Sin escribir la contraseña", huella) {
                     huella = it
                 }
-                // Al tocarlo cambia toda la app, no solo esta pantalla
-                FilaInterruptor(Icons.Filled.DarkMode, "Tema oscuro", "Colores oscuros en toda la app", tema.oscuro, tema.cambiar)
             }
         }
     }
