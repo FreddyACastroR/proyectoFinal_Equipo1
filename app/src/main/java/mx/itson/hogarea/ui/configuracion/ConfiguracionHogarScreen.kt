@@ -45,6 +45,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mx.itson.hogarea.datos.DatosMuestra
+import mx.itson.hogarea.datos.Persona
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.iconosHogar
+import mx.itson.hogarea.ui.componentes.Avatar
 import mx.itson.hogarea.ui.componentes.BarraInferior
 import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.navegacion.Rutas
@@ -55,19 +59,16 @@ import mx.itson.hogarea.ui.theme.HogareaTheme
 fun ConfiguracionHogarScreen(
     onIrPestana: (String) -> Unit,
     onMiembros: () -> Unit,
+    onMiembro: (Persona) -> Unit,
     onHabitaciones: () -> Unit,
-    onVerComoMiembro: () -> Unit,
 ) {
-    val hogar = DatosMuestra.casaNainari
+    val hogar = Sesion.hogarActivo
     val cs = MaterialTheme.colorScheme
     var menuAbierto by remember { mutableStateOf(false) }
-    var miembrosEditan by remember { mutableStateOf(hogar.miembrosPuedenEditar) }
+    val miembrosEditan = hogar.miembrosPuedenEditar
     var recordatorios by remember { mutableStateOf(true) }
     var mostrarDialogo by remember { mutableStateOf(false) }
-    var nombreHogar by remember { mutableStateOf(hogar.nombre) }
-
-    val nombres = hogar.miembros.map { it.nombre.substringBefore(" ") }
-    val listaMiembros = nombres.dropLast(1).joinToString(", ") + " y " + nombres.last()
+    val nombreHogar = hogar.nombre
     val totalPredeterminadas = DatosMuestra.habitaciones.sumOf { it.predeterminadas.size }
 
     Scaffold(
@@ -92,19 +93,19 @@ fun ConfiguracionHogarScreen(
                         onClick = { menuAbierto = true },
                         label = { Text(hogar.nombre) },
                         leadingIcon = {
-                            Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+                            Icon(iconosHogar[hogar.icono], contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
                         },
                         trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
                         colors = AssistChipDefaults.assistChipColors(containerColor = cs.secondaryContainer),
                         border = null,
                     )
                     DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
-                        DatosMuestra.hogares.forEach { h ->
+                        DatosMuestra.hogares.filter { Sesion.usuario in it.miembros }.forEach { h ->
                             DropdownMenuItem(
                                 text = { Text(h.nombre) },
                                 onClick = {
                                     menuAbierto = false
-                                    if (h != hogar) onVerComoMiembro()
+                                    Sesion.hogarActivo = h
                                 },
                             )
                         }
@@ -115,7 +116,20 @@ fun ConfiguracionHogarScreen(
             Seccion("General")
             Fila(Icons.Filled.Edit, "Nombre del hogar", nombreHogar) { mostrarDialogo = true }
             Fila(Icons.Filled.Key, "Código de invitación", "${hogar.codigo} · vence en 7 días", onMiembros)
-            Fila(Icons.Filled.Group, "Miembros (${hogar.miembros.size})", listaMiembros, onMiembros)
+
+            Seccion("Habitantes (${hogar.miembros.size})")
+            hogar.miembros.forEach { persona ->
+                val rol = DatosMuestra.rolDe(hogar, persona)
+                ListItem(
+                    headlineContent = { Text(if (persona == Sesion.usuario) "${persona.nombre} (tú)" else persona.nombre) },
+                    supportingContent = { Text(if (persona == hogar.creador) "$rol · Administra el hogar" else "$rol · Miembro") },
+                    leadingContent = { Avatar(persona, tamano = 40.dp) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onMiembro(persona) },
+                )
+            }
+            Fila(Icons.Filled.Group, "Invitar con el código", "Ver y compartir el código de invitación", onMiembros)
 
             Seccion("Tareas")
             Fila(
@@ -131,7 +145,7 @@ fun ConfiguracionHogarScreen(
                 "Los miembros pueden editar",
                 if (miembrosEditan) "Ahora: pueden ver y editar" else "Ahora: solo pueden ver",
                 miembrosEditan,
-            ) { miembrosEditan = it }
+            ) { DatosMuestra.guardarHogar(hogar, hogar.copy(miembrosPuedenEditar = it)) }
             FilaInterruptor(Icons.Filled.Notifications, "Recordatorios para todos", "Avisar a cada miembro", recordatorios) {
                 recordatorios = it
             }
@@ -143,8 +157,8 @@ fun ConfiguracionHogarScreen(
             ) {
                 Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp), tint = cs.onSurfaceVariant)
                 Text(
-                    "Solo tú, como creador, puedes ver esta pantalla.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Solo tú, que administras este hogar, puedes ver esta pantalla.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant,
                 )
             }
@@ -156,7 +170,7 @@ fun ConfiguracionHogarScreen(
             nombreActual = nombreHogar,
             onCancelar = { mostrarDialogo = false },
             onGuardar = { nuevo ->
-                nombreHogar = nuevo
+                DatosMuestra.guardarHogar(hogar, hogar.copy(nombre = nuevo))
                 mostrarDialogo = false
             },
         )
@@ -217,7 +231,7 @@ private fun FilaInterruptor(
 private fun ConfiguracionHogarPreview() {
     HogareaTheme(oscuro = false, onCambiarTema = {}) {
         FondoHogarea {
-            ConfiguracionHogarScreen(onIrPestana = {}, onMiembros = {}, onHabitaciones = {}, onVerComoMiembro = {})
+            ConfiguracionHogarScreen(onIrPestana = {}, onMiembros = {}, onMiembro = {}, onHabitaciones = {})
         }
     }
 }

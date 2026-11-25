@@ -36,16 +36,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import mx.itson.hogarea.datos.DatosMuestra
+import mx.itson.hogarea.datos.Persona
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.ui.componentes.compartirCodigo
+import mx.itson.hogarea.ui.componentes.copiarCodigo
 import mx.itson.hogarea.ui.componentes.Avatar
 import mx.itson.hogarea.ui.componentes.BarraSuperior
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 
 @Composable
-fun MiembrosScreen(onAtras: () -> Unit, onMiembro: () -> Unit) {
-    val hogar = DatosMuestra.casaNainari
+fun MiembrosScreen(onAtras: () -> Unit, onMiembro: (Persona) -> Unit) {
+    val hogar = Sesion.hogarActivo
     val cs = MaterialTheme.colorScheme
+    val contexto = LocalContext.current
+    var copiado by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = Color.Transparent,
         topBar = { BarraSuperior("Miembros de ${hogar.nombre}", onAtras = onAtras) },
@@ -58,49 +73,71 @@ fun MiembrosScreen(onAtras: () -> Unit, onMiembro: () -> Unit) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "${hogar.miembros.size} integrantes",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = cs.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = { }) {
-                    Icon(Icons.Filled.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Invitar")
-                }
-            }
+            Text(
+                "${hogar.miembros.size} integrantes",
+                style = MaterialTheme.typography.titleSmall,
+                color = cs.onSurfaceVariant,
+            )
             Card(colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
                 hogar.miembros.forEach { persona ->
                     val esCreador = persona == hogar.creador
+                    val rol = DatosMuestra.rolDe(hogar, persona)
                     ListItem(
-                        headlineContent = { Text(if (esCreador) "${persona.nombre} (tú)" else persona.nombre) },
-                        supportingContent = { Text(if (esCreador) "Roomie · Creador del hogar" else "Roomie · Miembro") },
-                        leadingContent = { Avatar(persona, tamano = 40.dp) },
+                        headlineContent = {
+                            Text(
+                                if (persona == Sesion.usuario) "${persona.nombre} (tú)" else persona.nombre,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                if (esCreador) "$rol · Administra el hogar" else "$rol · Miembro",
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        leadingContent = { Avatar(persona, tamano = 48.dp) },
                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable(onClick = onMiembro),
+                        modifier = Modifier.clickable { onMiembro(persona) },
                     )
                 }
             }
-            Card(colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = cs.primaryContainer, contentColor = cs.onPrimaryContainer),
+            ) {
                 Column(
-                    Modifier.fillMaxWidth().padding(16.dp),
+                    Modifier.fillMaxWidth().padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text("Código de invitación", style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(hogar.codigo, style = MaterialTheme.typography.headlineMedium, color = cs.primary)
-                        IconButton(onClick = { }) {
-                            Icon(Icons.Filled.ContentCopy, contentDescription = "Copiar código", tint = cs.primary)
-                        }
+                    Text("Código de invitación", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        hogar.codigo,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                    )
+                    TextButton(onClick = {
+                        copiarCodigo(contexto, hogar.codigo)
+                        copiado = true
+                    }) {
+                        Icon(
+                            if (copiado) Icons.Filled.Check else Icons.Filled.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (copiado) "Copiado" else "Copiar código")
                     }
-                    Text("Vence en 7 días.", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    Text("Vence en 7 días.", style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Button(onClick = { }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+            Button(
+                onClick = { compartirCodigo(contexto, hogar.nombre, hogar.codigo) },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+            ) {
                 Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Compartir código de invitación")
@@ -109,7 +146,7 @@ fun MiembrosScreen(onAtras: () -> Unit, onMiembro: () -> Unit) {
                 Icon(Icons.Filled.Info, contentDescription = null, modifier = Modifier.size(16.dp), tint = cs.onSurfaceVariant)
                 Text(
                     "Los permisos de edición se cambian en Configuración del hogar.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = cs.onSurfaceVariant,
                 )
             }
