@@ -2,6 +2,8 @@ package mx.itson.hogarea.ui.estadisticas
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +34,7 @@ import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
 import mx.itson.hogarea.ui.theme.LocalTema
 
+@OptIn(ExperimentalLayoutApi::class) // FlowRow
 @Composable
 fun TodosMisHogares(modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
@@ -39,13 +42,16 @@ fun TodosMisHogares(modifier: Modifier = Modifier) {
     var hogar by rememberSaveable { mutableStateOf("Todos") }
     var mes by rememberSaveable { mutableStateOf(meses.first()) }
 
+    val oscuro = LocalTema.current.oscuro
+
     Column(
         modifier
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            // 7.1 · Margen a los lados y también abajo
+            .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Filtro(Icons.Filled.Home, hogar, listOf("Todos") + DatosMuestra.hogares.map { it.nombre }) { hogar = it }
             Filtro(Icons.Filled.CalendarMonth, mes, meses) { mes = it }
         }
@@ -54,7 +60,11 @@ fun TodosMisHogares(modifier: Modifier = Modifier) {
             Indicador("58", "Completadas en total", verde, Modifier.weight(1f))
             Indicador("9%", "No completadas", cs.error, Modifier.weight(1f))
         }
-        TarjetaGrafica("Completadas por semana", "$mes · todos tus hogares", R.drawable.grafica_por_semana)
+        TarjetaGrafica(
+            "Completadas por semana",
+            "$mes · todos tus hogares",
+            if (oscuro) R.drawable.grafica_por_semana_oscuro else R.drawable.grafica_por_semana,
+        )
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Cumplimiento por hogar", style = MaterialTheme.typography.titleSmall)

@@ -35,9 +35,7 @@ fun EstadisticasScreen(onIrPestana: (String) -> Unit) {
         containerColor = Color.Transparent,
         topBar = {
             Column {
-                BarraSuperior("Estadísticas") {
-                    IconButton(onClick = { }) { Icon(Icons.Filled.Share, contentDescription = "Compartir") }
-                }
+                BarraSuperior("Estadísticas")
                 PrimaryTabRow(selectedTabIndex = pestana, containerColor = Color.Transparent) {
                     listOf("Por hogar", "Todos mis hogares").forEachIndexed { i, texto ->
                         Tab(selected = pestana == i, onClick = { pestana = i }, text = { Text(texto) })
