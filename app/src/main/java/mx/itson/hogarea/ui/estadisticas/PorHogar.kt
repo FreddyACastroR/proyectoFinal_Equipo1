@@ -5,6 +5,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +51,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import mx.itson.hogarea.R
 import mx.itson.hogarea.datos.DatosMuestra
 import mx.itson.hogarea.ui.theme.Exito
@@ -60,7 +63,7 @@ import mx.itson.hogarea.ui.theme.LocalTema
 internal val meses = listOf("Octubre 2026", "Septiembre 2026", "Agosto 2026")
 
 // 09 · Pestaña "Por hogar"
-@OptIn(ExperimentalMaterial3Api::class) // SegmentedButton es experimental en Material 3 1.2
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) // SegmentedButton y FlowRow
 @Composable
 fun PorHogar(modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
@@ -68,14 +71,18 @@ fun PorHogar(modifier: Modifier = Modifier) {
     var hogar by rememberSaveable { mutableStateOf("Casa Nainari") }
     var mes by rememberSaveable { mutableStateOf(meses.first()) }
     var periodo by rememberSaveable { mutableIntStateOf(1) } // 0 Día, 1 Mes, 2 Año
+    var verTodas by rememberSaveable { mutableStateOf(false) }
+    val oscuro = LocalTema.current.oscuro
 
     Column(
         modifier
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            // 7.1 · Margen a los lados y también abajo, para que nada toque la barra inferior
+            .padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // FlowRow: con la letra más grande los dos filtros bajan de renglón en vez de cortarse
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Filtro(Icons.Filled.Home, hogar, DatosMuestra.hogares.map { it.nombre }) { hogar = it }
             Filtro(Icons.Filled.CalendarMonth, mes, meses) { mes = it }
         }
@@ -93,26 +100,41 @@ fun PorHogar(modifier: Modifier = Modifier) {
             Indicador("6", "No realizadas", cs.error, Modifier.weight(1f))
             Indicador("88%", "Cumplimiento", verde, Modifier.weight(1f))
         }
-        TarjetaGrafica("Tareas completadas por miembro", "$mes · $hogar", R.drawable.grafica_por_miembro)
-        TarjetaGrafica("Reparto de tareas en el hogar", null, R.drawable.grafica_reparto)
+        // 2.2 · Las gráficas son imágenes: en oscuro se usa su versión oscura
+        TarjetaGrafica(
+            "Tareas completadas por miembro",
+            "$mes · $hogar",
+            if (oscuro) R.drawable.grafica_por_miembro_oscuro else R.drawable.grafica_por_miembro,
+        )
+        TarjetaGrafica(
+            "Reparto de tareas en el hogar",
+            null,
+            if (oscuro) R.drawable.grafica_reparto_oscuro else R.drawable.grafica_reparto,
+        )
         Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = cs.surfaceContainerLow)) {
             Row(Modifier.padding(start = 16.dp, top = 8.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Tareas no realizadas", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                TextButton(onClick = { }) { Text("Ver las 6") }
+                TextButton(onClick = { verTodas = !verTodas }) { Text(if (verTodas) "Ver menos" else "Ver las ${noRealizadas.size}") }
             }
-            ListItem(
-                headlineContent = { Text("Limpiar el baño") },
-                supportingContent = { Text("Ángel · vie 3 oct") },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
-            ListItem(
-                headlineContent = { Text("Sacar la basura") },
-                supportingContent = { Text("Freddy · sáb 11 oct") },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            (if (verTodas) noRealizadas else noRealizadas.take(2)).forEach { (tarea, detalle) ->
+                ListItem(
+                    headlineContent = { Text(tarea) },
+                    supportingContent = { Text(detalle) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
+            }
         }
     }
 }
+
+private val noRealizadas = listOf(
+    "Limpiar el baño" to "Ángel · vie 3 oct",
+    "Sacar la basura" to "Freddy · sáb 11 oct",
+    "Trapear la cocina" to "Rubén · lun 5 oct",
+    "Tender la ropa" to "André · mié 7 oct",
+    "Sacudir muebles" to "Freddy · jue 8 oct",
+    "Lavar los trastes" to "Ángel · mar 13 oct",
+)
 
 // Botón de filtro con menú: hogar y mes
 @Composable
@@ -143,9 +165,15 @@ internal fun Filtro(icono: ImageVector, valor: String, opciones: List<String>, o
 @Composable
 internal fun Indicador(valor: String, texto: String, color: Color, modifier: Modifier = Modifier) {
     Card(modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.padding(12.dp)) {
+        // 7.1 · Más aire arriba y abajo. A los lados 10 dp y etiqueta de 12 sp, para que
+        // "Cumplimiento" y "Completadas" quepan en un renglón en un celular de 360 dp.
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 16.dp)) {
             Text(valor, style = MaterialTheme.typography.headlineSmall, color = color)
-            Text(texto, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                texto,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
