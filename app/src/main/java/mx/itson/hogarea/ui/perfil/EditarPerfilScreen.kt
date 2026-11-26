@@ -41,24 +41,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Lock
 import mx.itson.hogarea.datos.DatosMuestra
-import mx.itson.hogarea.datos.Persona
+import mx.itson.hogarea.datos.Sesion
+import mx.itson.hogarea.datos.iconosHogar
 import mx.itson.hogarea.ui.componentes.Avatar
 import mx.itson.hogarea.ui.componentes.BarraSuperior
+import mx.itson.hogarea.ui.componentes.CampoFecha
+import mx.itson.hogarea.ui.componentes.CampoSelector
+import java.time.LocalDate
 import mx.itson.hogarea.ui.theme.FondoHogarea
 import mx.itson.hogarea.ui.theme.HogareaTheme
-
-private val roles = listOf("Mamá", "Papá", "Hijo o hija", "Roomie", "Otro")
 
 @Composable
 fun EditarPerfilScreen(onAtras: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    val yo = Persona.ANDRE
+    val yo = Sesion.usuario
     var nombre by rememberSaveable { mutableStateOf(yo.nombre) }
     var genero by rememberSaveable { mutableStateOf("Masculino") }
-    var nacimiento by rememberSaveable { mutableStateOf("08/07/2004") }
-    // Un rol por hogar: nombre del hogar → rol
-    val rolPorHogar = remember { mutableStateMapOf("Casa Nainari" to "Roomie", "Depa Obregón" to "Roomie") }
+    var nacimiento by rememberSaveable { mutableStateOf<LocalDate?>(LocalDate.of(2004, 7, 8)) }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -83,7 +84,6 @@ fun EditarPerfilScreen(onAtras: () -> Unit) {
         ) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Avatar(yo, tamano = 96.dp)
-                TextButton(onClick = { }) { Text("Cambiar foto") }
             }
             OutlinedTextField(
                 value = nombre,
@@ -103,82 +103,39 @@ fun EditarPerfilScreen(onAtras: () -> Unit) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CampoMenu("Género", genero, listOf("Femenino", "Masculino", "Otro", "Prefiero no decir"), { genero = it }, Modifier.weight(1f))
-                OutlinedTextField(
-                    value = nacimiento,
-                    onValueChange = { nacimiento = it },
-                    label = { Text("Nacimiento") },
-                    trailingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            // Uno debajo del otro: lado a lado, la fecha completa no cabe en un celular de 360 dp
+            CampoSelector(
+                etiqueta = "Género",
+                valor = genero,
+                opciones = listOf("Femenino", "Masculino", "Otro", "Prefiero no decir"),
+                onElegir = { genero = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            CampoFecha("Nacimiento", nacimiento, { nacimiento = it }, Modifier.fillMaxWidth())
             Text(
                 "Mi rol en cada hogar",
                 style = MaterialTheme.typography.titleSmall,
                 color = cs.primary,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            DatosMuestra.hogares.forEach { hogar ->
-                CampoMenu(
-                    etiqueta = hogar.nombre,
-                    valor = rolPorHogar[hogar.nombre] ?: "Roomie",
-                    opciones = roles,
-                    onElegir = { rolPorHogar[hogar.nombre] = it },
+            // 5.2 · El rol se ve, pero aquí ya no se edita: lo cambia quien administra cada hogar
+            DatosMuestra.hogares.filter { yo in it.miembros }.forEach { hogar ->
+                OutlinedTextField(
+                    value = DatosMuestra.rolDe(hogar, yo),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(hogar.nombre) },
+                    leadingIcon = { Icon(iconosHogar[hogar.icono], contentDescription = null) },
+                    trailingIcon = { Icon(Icons.Filled.Lock, contentDescription = "No se puede editar") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    icono = Icons.Filled.Home,
                 )
             }
             Text(
-                "Tu rol solo lo ven los demás miembros; no cambia tus permisos.",
-                style = MaterialTheme.typography.bodySmall,
+                "Tu rol lo asigna quien administra cada hogar, desde el detalle de miembro.",
+                style = MaterialTheme.typography.bodyMedium,
                 color = cs.onSurfaceVariant,
             )
-        }
-    }
-}
-
-// Campo de solo lectura que abre un menú con la flecha
-@Composable
-private fun CampoMenu(
-    etiqueta: String,
-    valor: String,
-    opciones: List<String>,
-    onElegir: (String) -> Unit,
-    modifier: Modifier,
-    icono: ImageVector? = null,
-) {
-    var abierto by remember { mutableStateOf(false) }
-    Box(modifier) {
-        OutlinedTextField(
-            value = valor,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(etiqueta) },
-            leadingIcon = if (icono != null) {
-                { Icon(icono, contentDescription = null) }
-            } else {
-                null
-            },
-            trailingIcon = {
-                IconButton(onClick = { abierto = true }) {
-                    Icon(Icons.Filled.ArrowDropDown, contentDescription = "Elegir $etiqueta")
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            opciones.forEach { opcion ->
-                DropdownMenuItem(
-                    text = { Text(opcion) },
-                    onClick = {
-                        onElegir(opcion)
-                        abierto = false
-                    },
-                )
-            }
         }
     }
 }
